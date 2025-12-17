@@ -1,0 +1,52 @@
+name: Workflow for update adzans 2
+
+on:
+  push:
+    branches:
+      - master
+
+  schedule:
+    # thanks: https://stackoverflow.com/a/16603902
+    - cron: "0 17 30 4,6,9,11 *"
+    - cron: "0 17 31 1,3,5,7,8,10,12 *"
+    - cron: "0 17 28,29 2 *"
+
+  workflow_dispatch:
+    inputs:
+      month:
+        description: "Month (MM), contoh: 02"
+        required: false
+        default: ""
+      year:
+        description: "Year (YYYY), contoh: 2025"
+        required: false
+        default: ""
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v1
+
+      - name: Update adzans
+        uses: ./.github/action-update-adzans/
+        env:
+          JWO_MONTH: ${{ github.event.inputs.month }}
+          JWO_YEAR: ${{ github.event.inputs.year }}
+
+      - name: Commit changes
+        uses: EndBug/add-and-commit@v7.0.0
+        with:
+          message: "[gh-actions] update adzans"
+          author_name: github-actions
+          author_email: 41898282+github-actions[bot]@users.noreply.github.com
+          push: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}

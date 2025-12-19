@@ -1,9 +1,7 @@
 name: Workflow for update adzans 2
 
 on:
-  push:
-    branches:
-      - master
+  
 
   schedule:
     # thanks: https://stackoverflow.com/a/16603902

@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 tz = pytz.timezone('Asia/Jakarta')
 base_url = 'https://jadwalsholat.org/jadwal-sholat/monthly.php'
 OFFSET_MINUTES = 15
+RANGE_MONTHS_DEFAULT = 6   # ← jumlah bulan ke depan
 
 
 def strip_lower(s):
@@ -42,13 +43,7 @@ def get_cities():
     return dict(zip(city_ids, city_names))
 
 
-def get_adzans(city_id, month='', year=''):
-
-    if month == '':
-        month = datetime.now(tz).month
-
-    if year == '':
-        year = datetime.now(tz).year
+def get_adzans(city_id, month, year):
 
     url = f"{base_url}?id={city_id}&m={month}&y={year}"
     page = requests.get(url)
@@ -115,28 +110,53 @@ def write_file(city, adzans):
 
 
 def process_city(name, id):
-
-    month = os.getenv('JWO_MONTH', f"{datetime.now(tz).month:02d}")
-    year = os.getenv('JWO_YEAR', f"{datetime.now(tz).year:04d}")
+    month = os.getenv('JWO_MONTH')
+    year = os.getenv('JWO_YEAR')
 
     write_file(name, get_adzans(id, month, year))
-    print('processing ' + name + ' done')
+    print(f'✔ {name} {year}-{month} done')
+
+
+def month_range():
+    """Return list of (year, month) to process"""
+    env_month = os.getenv('JWO_MONTH')
+    env_year = os.getenv('JWO_YEAR')
+
+    now = datetime.now(tz)
+
+    # Manual → 1 bulan saja
+    if env_month and env_year:
+        return [(env_year, env_month)]
+
+    # Otomatis → 6 bulan ke depan
+    months = []
+    for i in range(RANGE_MONTHS_DEFAULT):
+        d = now + timedelta(days=32 * i)
+        months.append((f"{d.year:04d}", f"{d.month:02d}"))
+
+    # unik & berurutan
+    return list(dict.fromkeys(months))
 
 
 def main():
 
     start = time.time()
     cities = get_cities()
+    ranges = month_range()
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-        futures = []
-        for id, name in cities.items():
-            print('processing ' + name)
-            futures.append(executor.submit(process_city, name=name, id=id))
-        for _ in concurrent.futures.as_completed(futures):
-            pass
+    for year, month in ranges:
+        print(f"\n=== Processing {year}-{month} ===")
+        os.environ['JWO_YEAR'] = year
+        os.environ['JWO_MONTH'] = month
 
-    print('\n It took', time.time() - start, 'seconds.')
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+            futures = []
+            for id, name in cities.items():
+                futures.append(executor.submit(process_city, name=name, id=id))
+            for _ in concurrent.futures.as_completed(futures):
+                pass
+
+    print('\nFinished in', round(time.time() - start, 2), 'seconds')
 
 
 if __name__ == "__main__":

@@ -3,7 +3,7 @@ name: Merge Mojokerto 2025 JSON
 on:
   push:
     paths:
-      - 'adzan/mojokerto/2025/*.json'
+      - 'adzan/mojokerto/2026/*.json'
   workflow_dispatch:
 
 jobs:
@@ -19,7 +19,7 @@ jobs:
 
       - name: Merge JSON files
         run: |
-          cd adzan/mojokerto/2025
+          cd adzan/mojokerto/2026
 
           # ambil semua json kecuali merged.json
           FILES=$(ls *.json | grep -v '^merged\.json$')

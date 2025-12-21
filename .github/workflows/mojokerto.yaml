@@ -1,9 +1,9 @@
-name: Merge Mojokerto 2025 JSON
+name: Merge Mojokerto JSON per Tahun
 
 on:
   push:
     paths:
-      - 'adzan/mojokerto/2026/*.json'
+      - 'adzan/mojokerto/**.json'
   workflow_dispatch:
 
 jobs:
@@ -17,23 +17,32 @@ jobs:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      - name: Merge JSON files
+      - name: Merge JSON per tahun
         run: |
-          cd adzan/mojokerto/2026
+          set -e
+          BASE_DIR="adzan/mojokerto"
 
-          # ambil semua json kecuali merged.json
-          FILES=$(ls *.json | grep -v '^merged\.json$')
+          for YEAR_DIR in $BASE_DIR/*; do
+            if [ -d "$YEAR_DIR" ]; then
+              YEAR=$(basename "$YEAR_DIR")
+              OUTPUT="$YEAR_DIR/data_${YEAR}.json"
 
-          # merge jadi 1 array
-          jq -s '.' $FILES > merged.json
+              echo "Processing year: $YEAR"
 
-          echo "Merged files:"
-          echo "$FILES"
-          echo "Result:"
-          wc -l merged.json
+              FILES=$(ls "$YEAR_DIR"/*.json 2>/dev/null \
+                | grep -v "data_${YEAR}.json" || true)
 
-      - name: Commit merged.json
+              if [ -n "$FILES" ]; then
+                jq -s '.' $FILES > "$OUTPUT"
+                echo "✔ Created $OUTPUT"
+              else
+                echo "⚠ No JSON files in $YEAR_DIR"
+              fi
+            fi
+          done
+
+      - name: Commit merged yearly data
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "chore: merge mojokerto 2025 json"
-          file_pattern: adzan/mojokerto/2026/merged.json
+          commit_message: "chore: merge mojokerto json per tahun"
+          file_pattern: adzan/mojokerto/**/data_*.json

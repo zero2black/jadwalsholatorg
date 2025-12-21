@@ -1,0 +1,39 @@
+name: Merge Mojokerto 2025 JSON
+
+on:
+  push:
+    paths:
+      - 'adzan/mojokerto/2025/*.json'
+  workflow_dispatch:
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Merge JSON files
+        run: |
+          cd adzan/mojokerto/2025
+
+          # ambil semua json kecuali merged.json
+          FILES=$(ls *.json | grep -v '^merged\.json$')
+
+          # merge jadi 1 array
+          jq -s '.' $FILES > merged.json
+
+          echo "Merged files:"
+          echo "$FILES"
+          echo "Result:"
+          wc -l merged.json
+
+      - name: Commit merged.json
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: merge mojokerto 2025 json"
+          file_pattern: adzan/mojokerto/2025/merged.json

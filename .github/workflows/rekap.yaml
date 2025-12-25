@@ -1,0 +1,64 @@
+name: Merge Mojokerto data_all.json
+
+on:
+  push:
+    paths:
+      - 'adzan/mojokerto/*/data_*.json'
+  workflow_dispatch:
+
+jobs:
+  merge-all:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+          ref: master
+
+      - name: Install jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Merge all yearly data into data_all.json
+        run: |
+          set -e
+          FILES=""
+
+          for YEAR_DIR in adzan/mojokerto/*; do
+            [ -d "$YEAR_DIR" ] || continue
+            YEAR=$(basename "$YEAR_DIR")
+            FILE="$YEAR_DIR/data_${YEAR}.json"
+
+            if [ -f "$FILE" ]; then
+              FILES="$FILES $FILE"
+            fi
+          done
+
+          if [ -z "$FILES" ]; then
+            echo "❌ No yearly data files found"
+            exit 1
+          fi
+
+          jq -s 'add' $FILES > adzan/mojokerto/data_all.json
+          echo "✔ Created adzan/mojokerto/data_all.json"
+
+      - name: Commit and push data_all.json
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git status
+          git add adzan/mojokerto/data_all.json
+
+          if git diff --cached --quiet; then
+            echo "⚠ data_all.json unchanged"
+            exit 0
+          fi
+
+          git commit -m "chore: update mojokerto data_all.json"
+          git push origin master

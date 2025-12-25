@@ -15,34 +15,50 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
 
       - name: Merge JSON per tahun
         run: |
           set -e
           BASE_DIR="adzan/mojokerto"
 
-          for YEAR_DIR in $BASE_DIR/*; do
+          for YEAR_DIR in "$BASE_DIR"/*; do
             if [ -d "$YEAR_DIR" ]; then
               YEAR=$(basename "$YEAR_DIR")
               OUTPUT="$YEAR_DIR/data_${YEAR}.json"
 
-              echo "Processing year: $YEAR"
+              echo "▶ Processing year: $YEAR"
 
               FILES=$(ls "$YEAR_DIR"/*.json 2>/dev/null \
                 | grep -v "data_${YEAR}.json" || true)
 
               if [ -n "$FILES" ]; then
-                jq -s '.' $FILES > "$OUTPUT"
+                jq -s 'add' $FILES > "$OUTPUT"
                 echo "✔ Created $OUTPUT"
               else
-                echo "⚠ No JSON files in $YEAR_DIR"
+                echo "⚠ No JSON files found in $YEAR_DIR"
               fi
             fi
           done
+
+      - name: Merge all years into data_all.json
+        run: |
+          set -e
+          ALL_FILES=$(ls adzan/mojokerto/*/data_*.json 2>/dev/null || true)
+
+          if [ -n "$ALL_FILES" ]; then
+            jq -s 'add' $ALL_FILES > adzan/mojokerto/data_all.json
+            echo "✔ Created adzan/mojokerto/data_all.json"
+          else
+            echo "⚠ No yearly data files found"
+          fi
 
       - name: Commit merged yearly data
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "chore: merge mojokerto json per tahun"
-          file_pattern: adzan/mojokerto/**/data_*.json
+          file_pattern: |
+            adzan/mojokerto/**/data_*.json
+            adzan/mojokerto/data_all.json

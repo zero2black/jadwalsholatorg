@@ -29,16 +29,12 @@ jobs:
               YEAR=$(basename "$YEAR_DIR")
               OUTPUT="$YEAR_DIR/data_${YEAR}.json"
 
-              echo "▶ Processing year: $YEAR"
-
               FILES=$(ls "$YEAR_DIR"/*.json 2>/dev/null \
                 | grep -v "data_${YEAR}.json" || true)
 
               if [ -n "$FILES" ]; then
                 jq -s 'add' $FILES > "$OUTPUT"
                 echo "✔ Created $OUTPUT"
-              else
-                echo "⚠ No JSON files found in $YEAR_DIR"
               fi
             fi
           done
@@ -46,10 +42,19 @@ jobs:
       - name: Merge all years into data_all.json
         run: |
           set -e
-          ALL_FILES=$(ls adzan/mojokerto/*/data_*.json 2>/dev/null || true)
+          FILES=""
 
-          if [ -n "$ALL_FILES" ]; then
-            jq -s 'add' $ALL_FILES > adzan/mojokerto/data_all.json
+          for YEAR_DIR in adzan/mojokerto/*; do
+            YEAR=$(basename "$YEAR_DIR")
+            FILE="$YEAR_DIR/data_${YEAR}.json"
+
+            if [ -f "$FILE" ]; then
+              FILES="$FILES $FILE"
+            fi
+          done
+
+          if [ -n "$FILES" ]; then
+            jq -s 'add' $FILES > adzan/mojokerto/data_all.json
             echo "✔ Created adzan/mojokerto/data_all.json"
           else
             echo "⚠ No yearly data files found"

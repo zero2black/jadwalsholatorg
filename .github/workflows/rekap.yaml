@@ -1,4 +1,4 @@
-name: Merge Mojokerto data_all.json
+name: Merge Mojokerto 2 Tahun Terbaru
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  merge-all:
+  merge-latest:
     runs-on: ubuntu-latest
 
     steps:
@@ -23,42 +23,53 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y jq
 
-      - name: Merge all yearly data into data_all.json
+      - name: Merge 2 data tahun terbaru
         run: |
           set -e
-          FILES=""
 
-          for YEAR_DIR in adzan/mojokerto/*; do
-            [ -d "$YEAR_DIR" ] || continue
-            YEAR=$(basename "$YEAR_DIR")
-            FILE="$YEAR_DIR/data_${YEAR}.json"
+          # ambil list tahun dari folder
+          YEARS=$(ls -d adzan/mojokerto/*/ \
+            | sed 's|adzan/mojokerto/||;s|/||' \
+            | sort -n)
 
-            if [ -f "$FILE" ]; then
-              FILES="$FILES $FILE"
-            fi
-          done
+          COUNT=$(echo "$YEARS" | wc -l)
 
-          if [ -z "$FILES" ]; then
-            echo "❌ No yearly data files found"
+          if [ "$COUNT" -lt 2 ]; then
+            echo "❌ Minimal butuh 2 tahun data"
             exit 1
           fi
+
+          # ambil 2 tahun terakhir
+          LAST_TWO=$(echo "$YEARS" | tail -n 2)
+
+          FILES=""
+          for Y in $LAST_TWO; do
+            FILE="adzan/mojokerto/$Y/data_${Y}.json"
+            if [ ! -f "$FILE" ]; then
+              echo "❌ File tidak ditemukan: $FILE"
+              exit 1
+            fi
+            FILES="$FILES $FILE"
+          done
+
+          echo "▶ Menggabungkan:"
+          echo "$FILES"
 
           jq -s 'add' $FILES > adzan/mojokerto/data_all.json
           echo "✔ Created adzan/mojokerto/data_all.json"
 
-      - name: Commit and push data_all.json
+      - name: Commit data_all.json
         run: |
           set -e
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git status
           git add adzan/mojokerto/data_all.json
 
           if git diff --cached --quiet; then
-            echo "⚠ data_all.json unchanged"
+            echo "⚠ data_all.json tidak berubah"
             exit 0
           fi
 
-          git commit -m "chore: update mojokerto data_all.json"
+          git commit -m "chore: merge mojokerto 2 tahun terbaru"
           git push origin master

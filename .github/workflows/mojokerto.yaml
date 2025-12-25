@@ -3,7 +3,7 @@ name: Merge Mojokerto JSON per Tahun
 on:
   push:
     paths:
-      - 'adzan/mojokerto/**/*.json'
+      - 'adzan/mojokerto/**.json'
   workflow_dispatch:
 
 jobs:
@@ -13,61 +13,36 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          persist-credentials: true
-          ref: master
 
       - name: Install jq
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y jq
+        run: sudo apt-get update && sudo apt-get install -y jq
 
       - name: Merge JSON per tahun
         run: |
           set -e
           BASE_DIR="adzan/mojokerto"
 
-          for YEAR_DIR in "$BASE_DIR"/*; do
-            [ -d "$YEAR_DIR" ] || continue
+          for YEAR_DIR in $BASE_DIR/*; do
+            if [ -d "$YEAR_DIR" ]; then
+              YEAR=$(basename "$YEAR_DIR")
+              OUTPUT="$YEAR_DIR/data_${YEAR}.json"
 
-            YEAR=$(basename "$YEAR_DIR")
-            OUTPUT="$YEAR_DIR/data_${YEAR}.json"
+              echo "Processing year: $YEAR"
 
-            FILES=$(ls "$YEAR_DIR"/*.json 2>/dev/null \
-              | grep -v "data_${YEAR}.json" || true)
+              FILES=$(ls "$YEAR_DIR"/*.json 2>/dev/null \
+                | grep -v "data_${YEAR}.json" || true)
 
-            if [ -n "$FILES" ]; then
-              jq -s 'add' $FILES > "$OUTPUT"
-              echo "✔ Created $OUTPUT"
+              if [ -n "$FILES" ]; then
+                jq -s '.' $FILES > "$OUTPUT"
+                echo "✔ Created $OUTPUT"
+              else
+                echo "⚠ No JSON files in $YEAR_DIR"
+              fi
             fi
           done
 
-      - name: Merge all years into data_all.json
-        run: |
-          set -e
-          FILES=""
-
-          for YEAR_DIR in adzan/mojokerto/*; do
-            [ -d "$YEAR_DIR" ] || continue
-            YEAR=$(basename "$YEAR_DIR")
-            FILE="$YEAR_DIR/data_${YEAR}.json"
-            [ -f "$FILE" ] && FILES="$FILES $FILE"
-          done
-
-          jq -s 'add' $FILES > adzan/mojokerto/data_all.json
-          echo "✔ Created adzan/mojokerto/data_all.json"
-
-      - name: Commit and push merged files (FIX)
-        run: |
-          set -e
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          echo "== Git status BEFORE add =="
-          git status
-
-          # ❗ JANGAN pakai **
-          git add adzan/mojokerto/data_all.json adzan/mojokerto/*/data_*.json
-
-          echo "
+      - name: Commit merged yearly data
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: merge mojokerto json per tahun"
+          file_pattern: adzan/mojokerto/**/data_*.json

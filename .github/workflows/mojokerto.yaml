@@ -1,9 +1,10 @@
 name: Merge Mojokerto JSON per Tahun
 
 on:
-  push:
-    paths:
-      - 'adzan/mojokerto/*/*.json'
+  workflow_run:
+    workflows: update adzan
+    types:
+      - completed
   workflow_dispatch:
 
 jobs:

@@ -3,7 +3,7 @@ name: Merge Mojokerto JSON per Tahun
 on:
   push:
     paths:
-      - 'adzan/mojokerto/**/**.json'
+      - 'adzan/mojokerto/*/*.json'
   workflow_dispatch:
 
 jobs:

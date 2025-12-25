@@ -36,8 +36,6 @@ jobs:
             if [ -n "$FILES" ]; then
               jq -s 'add' $FILES > "$OUTPUT"
               echo "✔ Created $OUTPUT"
-            else
-              echo "⚠ No JSON files in $YEAR_DIR"
             fi
           done
 
@@ -48,24 +46,29 @@ jobs:
 
           for YEAR_DIR in adzan/mojokerto/*; do
             [ -d "$YEAR_DIR" ] || continue
-
             YEAR=$(basename "$YEAR_DIR")
             FILE="$YEAR_DIR/data_${YEAR}.json"
 
-            if [ -f "$FILE" ]; then
-              FILES="$FILES $FILE"
-            fi
+            [ -f "$FILE" ] && FILES="$FILES $FILE"
           done
 
           if [ -n "$FILES" ]; then
             jq -s 'add' $FILES > adzan/mojokerto/data_all.json
             echo "✔ Created adzan/mojokerto/data_all.json"
-          else
-            echo "⚠ No yearly data files found"
           fi
 
-      - name: Commit merged yearly data
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "chore: merge mojokerto json per tahun"
-          file_pattern: adzan/mojokerto/**/*.json
+      - name: Commit merged files (manual)
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add adzan/mojokerto/**/*.json
+
+          if git diff --cached --quiet; then
+            echo "⚠ No changes to commit"
+          else
+            git commit -m "chore: merge mojokerto json per tahun"
+            git push
+            echo "✔ Changes pushed"
+          fi

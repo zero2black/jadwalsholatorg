@@ -58,38 +58,16 @@ jobs:
           jq -s 'add' $FILES > adzan/mojokerto/data_all.json
           echo "✔ Created adzan/mojokerto/data_all.json"
 
-      
-      - name: Commit and push (FIX glob)
+      - name: Commit and push merged files (FIX)
         run: |
           set -e
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+          echo "== Git status BEFORE add =="
           git status
 
+          # ❗ JANGAN pakai **
           git add adzan/mojokerto/data_all.json adzan/mojokerto/*/data_*.json
 
-          git status
-
-          if git diff --cached --quiet; then
-            echo "❌ Nothing to commit"
-            exit 1
-          fi
-
-          git commit -m "chore: merge mojokerto json per tahun"
-          git push origin master
-        run: |
-          set -e
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git status
-          git add adzan/mojokerto/**/*.json
-
-          if git diff --cached --quiet; then
-            echo "❌ Nothing to commit (unexpected)"
-            exit 1
-          fi
-
-          git commit -m "chore: merge mojokerto json per tahun"
-          git push origin master
+          echo "

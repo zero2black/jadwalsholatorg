@@ -4,6 +4,10 @@ on:
   push:
     paths:
       - 'adzan/mojokerto/*/data_*.json'
+  workflow_run:
+    workflows: Merge Mojokerto JSON per Tahun
+    types:
+      - completed
   workflow_dispatch:
 
 jobs:
